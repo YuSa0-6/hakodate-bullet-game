@@ -31,6 +31,10 @@ class BattleView < Live::View
   HEAVY_FPS              = 24
   TICK_DT                = 1.0 / Config::FPS  # ゲーム時間は常に 30Hz 固定
 
+  # KeyboardEvent.key 列。タイトル画面でこの並びを入力すると EXTRA が解放される。
+  KONAMI_SEQUENCE = %w[ArrowUp ArrowUp ArrowDown ArrowDown
+                       ArrowLeft ArrowRight ArrowLeft ArrowRight b a].freeze
+
   def initialize(...)
     super
     @state      = :start
@@ -38,6 +42,8 @@ class BattleView < Live::View
     @battle     = nil
     @barrier    = nil
     @input_queue = nil
+    @extra_unlocked = false
+    @konami_index   = 0
   end
 
   STATIC_CSS = <<~CSS
@@ -125,16 +131,48 @@ class BattleView < Live::View
   def handle_title(event)
     return unless event[:type] == 'keydown'
     return if event[:repeat]
+
+    # Konami シーケンスが進行中で、入力が次に期待されるキーなら Konami が消費する
+    # （難易度シフト・スタート判定はスキップ）。マッチに外れた入力は通常ハンドラに流す。
+    return if consume_konami!(event[:key])
+
     case event[:key]
     when 'ArrowLeft', 'a', 'A'
       shift_difficulty(-1)
     when 'ArrowRight', 'd', 'D'
       shift_difficulty(+1)
-    when 'Tab', 'F5', 'F12', 'Meta', 'Control', 'Alt', 'Shift'
+    when 'Tab', 'F5', 'F12', 'Meta', 'Control', 'Alt', 'Shift', 'b', 'B'
+      # b / B は Konami シーケンスの終端文字。中途半端なタイミングで押された
+      # 場合に start_battle! へ流すと、ユーザーが Konami を入力しているつもりで
+      # ゲームが始まってしまうため no-op にする（index 8 で押されたケースは
+      # consume_konami! が先に true で吸収するので、ここには来ない）。
       nil
     else
       start_battle!
     end
+  end
+
+  # 一致したら true（呼び出し元はその入力の以後の処理を打ち切る）。
+  # 外れたら false で返し、key 自体が先頭と一致するなら index=1 にリセット（連打耐性）。
+  def consume_konami!(key)
+    if key == KONAMI_SEQUENCE[@konami_index]
+      @konami_index += 1
+      if @konami_index >= KONAMI_SEQUENCE.size
+        unlock_extra!
+        @konami_index = 0
+      end
+      true
+    else
+      @konami_index = (key == KONAMI_SEQUENCE[0]) ? 1 : 0
+      false
+    end
+  end
+
+  def unlock_extra!
+    return if @extra_unlocked
+    @extra_unlocked = true
+    @difficulty = Config::EXTRA_DIFFICULTY
+    update!
   end
 
   def handle_result(event)
@@ -151,9 +189,15 @@ class BattleView < Live::View
   end
 
   def shift_difficulty(delta)
-    idx = (Config::DIFFICULTIES.index(@difficulty) + delta) % Config::DIFFICULTIES.size
-    @difficulty = Config::DIFFICULTIES[idx]
+    diffs = available_difficulties
+    idx = (diffs.index(@difficulty) + delta) % diffs.size
+    @difficulty = diffs[idx]
     update!
+  end
+
+  # @extra_unlocked のときだけ :extra を選択肢に含める
+  def available_difficulties
+    @extra_unlocked ? Config::ALL_DIFFICULTIES : Config::DIFFICULTIES
   end
 
   # ── Lifecycle ─────────────────────────────
@@ -238,7 +282,7 @@ class BattleView < Live::View
     builder.tag(:div, class: 'stage') do
       case @state
       when :start
-        Renderers::Screens.title(builder, difficulty: @difficulty)
+        Renderers::Screens.title(builder, difficulty: @difficulty, extra_unlocked: @extra_unlocked)
       when :playing
         render_playing(builder)
       when :result

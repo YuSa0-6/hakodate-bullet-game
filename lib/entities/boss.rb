@@ -66,6 +66,12 @@ class Boss
     barrier.async { |task| run_starburst_pattern(task, sink) }
   end
 
+  # @diff から読み出す starburst パラメータ（テストや UI も参照する想定で public）。
+  # HARD 以下は @diff に未定義 → 既存定数にフォールバック。
+  def starburst_cycle = @diff[:starburst_cycle] || STARBURST_CYCLE
+  def starburst_phase_threshold = @diff[:starburst_phase] || 2
+  def starburst_duo? = @diff[:starburst_duo] == true
+
   private
 
   # 4 拍子の弾幕：イカ墨拡散 → ラーメン乱打(phase>=2) → 寿司狙い → ラッキー放射(phase>=2)
@@ -158,8 +164,8 @@ class Boss
   end
 
   # ── 星形バースト ──
-  # phase >= 2 で 7 秒ごと：星形フォーメーション → 0.6 秒静止 → 散開 → 0.8 秒後ホーミング。
-  # 弾の hash を Fiber が保持し続け、フェーズ移行のたびに直接書き換える（Fiber ならではの書き方）。
+  # 既定: phase >= 2 で 7 秒ごと：星形フォーメーション → 0.6 秒静止 → 散開 → 0.8 秒後ホーミング。
+  # @diff で Extra モード等が cycle / phase 閾値 / duo（2セット同時）を上書きできる。
   STARBURST_CYCLE       = 7.0
   STARBURST_HOLD        = 0.6
   STARBURST_BURST       = 0.8
@@ -167,13 +173,15 @@ class Boss
   STARBURST_R_INNER     = 40.0
   STARBURST_BURST_SPEED = 3.5
   STARBURST_TURN_RATE   = 0.045  # rad/frame（30fps で約 2.6°/frame ≒ 1 周 4.7秒）
+  STARBURST_DUO_OFFSET  = Math::PI / 10  # 5角星の頂点ピッチの半分（ちょうど隙間を埋める）
 
   def run_starburst_pattern(task, sink)
     while alive?
-      task.sleep(STARBURST_CYCLE)
-      next unless alive? && phase >= 2
+      task.sleep(starburst_cycle)
+      next unless alive? && phase >= starburst_phase_threshold
 
       bullets = spawn_star_formation(sink)
+      bullets.concat(spawn_star_formation(sink, rot: STARBURST_DUO_OFFSET)) if starburst_duo?
 
       task.sleep(STARBURST_HOLD)
       break unless alive?
@@ -191,12 +199,13 @@ class Boss
   end
 
   # 5 角星の 10 頂点（外角5・内角5を交互）に静止弾を配置。`[bullet, 散開角]` の組を返す。
-  def spawn_star_formation(sink)
+  # `rot` を与えると全頂点を回転させた重ね合わせ（Extra の duo モード用）。
+  def spawn_star_formation(sink, rot: 0.0)
     cx0 = cx
     cy0 = cy + 60.0
     pairs = []
     10.times do |i|
-      ang = -Math::PI / 2 + i * Math::PI * 2 / 10
+      ang = -Math::PI / 2 + i * Math::PI * 2 / 10 + rot
       r   = i.even? ? STARBURST_R_OUTER : STARBURST_R_INNER
       bx  = cx0 + Math.cos(ang) * r - Config::B_SIZE / 2.0
       by  = cy0 + Math.sin(ang) * r - Config::B_SIZE / 2.0
