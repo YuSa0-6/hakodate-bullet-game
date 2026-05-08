@@ -24,10 +24,9 @@ module Bullet
       b[:x] < -120 || b[:x] > Config::FIELD_W + 120
   end
 
-  # お邪魔弾の基底スプライト
+  # お邪魔弾の基底（render 側は :garbage フラグでスプライトを切り替える）
   def garbage(x:, y:, vx:, vy:, sine: false, phase: 0.0)
     {
-      type: Assets::Icons::BULLET_GARBAGE,
       x: x.to_f, y: y.to_f,
       vx: vx, vy: vy,
       sine: sine, phase: phase,

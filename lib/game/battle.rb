@@ -24,6 +24,9 @@ class Battle
     @rng        = Random.new(seed)
     @barrier    = barrier
 
+    # P1 と P2 で seed をずらすのは、各プレイヤー側の RNG（食べ物スポーン位置・種別）を
+    # 別パターンにするため。雑魚の同期スポーンは Battle 側の @rng を共有しているので
+    # こちらの seed 差は影響しない。
     @p1 = Player.new(
       name: 'P1', color: '#7cf',
       controls: Config::P1_CONTROLS, diff: @diff, seed: seed

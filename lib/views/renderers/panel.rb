@@ -150,9 +150,12 @@ module Renderers
 
     def render_player(builder, p)
       pwr_cls = p.powered ? ' pwr' : ''
+      # 無敵中は 6 frame 周期で点滅させる（プレイヤーが状態を視認できる）
+      opacity = p.invuln_frames > 0 && (p.invuln_frames / 3).even? ? 0.35 : 1.0
+      style = +"transform:translate(#{p.px.to_i}px,#{p.py.to_i}px);"
+      style << "opacity:#{opacity};" if opacity != 1.0
       # .pl は -6px の margin で sprite 描画範囲を当たり判定より広めに見せる
-      builder.tag(:div, class: "pl ent#{pwr_cls} #{SP_PLAYER}",
-                  style: "transform:translate(#{p.px.to_i}px,#{p.py.to_i}px);") {}
+      builder.tag(:div, class: "pl ent#{pwr_cls} #{SP_PLAYER}", style: style) {}
       hb_color = p.focus ? '#ff5577' : 'white'
       builder.tag(:div, class: 'hb', style: "position:absolute;background:#{hb_color};transform:translate(#{(p.px + 8).to_i}px,#{(p.py + 8).to_i}px);") {}
     end

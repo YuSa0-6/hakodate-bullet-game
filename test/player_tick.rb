@@ -40,6 +40,34 @@ describe Player do
       moved = player.px - x0
       expect(moved).to be == Config::P_SPEED * 0.4
     end
+
+    it '対角入力時の合成速度は P_SPEED と一致する（√2 倍バグの回帰防止）' do
+      # フィールド中央寄りに置いて境界クランプの影響を消す
+      player.px = 200.0
+      player.py = 200.0
+      player.dx = Config::P_SPEED
+      player.dy = Config::P_SPEED
+      x0 = player.px
+      y0 = player.py
+      player.tick(opponent_alive: true)
+
+      moved = Math.hypot(player.px - x0, player.py - y0)
+      expect(moved).to be_within(0.001).of(Config::P_SPEED.to_f)
+    end
+
+    it '対角入力 + focus でも合成速度は (P_SPEED * 0.4) と一致する' do
+      player.px = 200.0
+      player.py = 200.0
+      player.focus = true
+      player.dx = Config::P_SPEED
+      player.dy = -Config::P_SPEED
+      x0 = player.px
+      y0 = player.py
+      player.tick(opponent_alive: true)
+
+      moved = Math.hypot(player.px - x0, player.py - y0)
+      expect(moved).to be_within(0.001).of(Config::P_SPEED * 0.4)
+    end
   end
 
   with '#tick（弾の inbox からのドレイン）' do
@@ -118,6 +146,22 @@ describe Player do
       # 自機が左下にいるので vy は減速（負→0方向へ）または vx が負へ
       expect(b[:vx] < 0 || b[:vy] > -3.0).to be == true
     end
+
+    it '自機が弾の真後ろ（差分 ~ ±π）にいても角度差は [-π, π] に正規化される' do
+      # 弾を画面真ん中、左方向に飛ばす（角 ~ π）。自機を右側に置くと差分は ~ -π 近辺。
+      # while ループ実装でも modulo 実装でも、結果の turn は ±turn_rate に収まるべき。
+      player.px = 400.0
+      player.py = 300.0
+      b = {x: 200.0, y: 300.0, vx: -3.0, vy: 0.0, homing: {turn_rate: 0.05}}
+      original_speed = Math.hypot(b[:vx], b[:vy])
+      player.instance_variable_get(:@bullet_inbox) << b
+      player.tick(opponent_alive: true)
+
+      expect(Math.hypot(b[:vx], b[:vy])).to be_within(0.01).of(original_speed)
+      # 1 frame で ±turn_rate しか回らないので、向きはまだほぼ左向き
+      angle = Math.atan2(b[:vy], b[:vx])
+      expect(angle.abs).to be > (Math::PI - 0.1)
+    end
   end
 
   with '#tick（ライフと alive）' do
@@ -150,10 +194,61 @@ describe Player do
         }
         player.instance_variable_get(:@bullet_inbox) << bullet
         player.tick(opponent_alive: true)
+        # 被弾後は無敵フレームが立つので、次の被弾までクールダウンする
+        Player::INVULN_FRAMES.times { player.tick(opponent_alive: true) }
       end
 
       expect(player.lives).to be == 0
       expect(player).not.to be(:alive?)
+    end
+
+    it '被弾直後の連続ヒットは無敵時間で吸収される（INVULN_FRAMES 中はライフが減らない）' do
+      player.px = 100.0
+      player.py = 100.0
+      bullet = {
+        x: player.px, y: player.py,
+        vx: 0.0, vy: 0.0,
+        sine: false, bounce: false, garbage: true
+      }
+      player.instance_variable_get(:@bullet_inbox) << bullet
+      player.tick(opponent_alive: true)
+
+      lives_after_first = player.lives
+      expect(lives_after_first).to be == 2
+      expect(player.invuln_frames).to be > 0
+
+      # 無敵中にもう 1 発重なって置いても lives は減らない
+      bullet2 = {
+        x: player.px, y: player.py,
+        vx: 0.0, vy: 0.0,
+        sine: false, bounce: false, garbage: true
+      }
+      player.instance_variable_get(:@bullet_inbox) << bullet2
+      player.tick(opponent_alive: true)
+
+      expect(player.lives).to be == lives_after_first
+    end
+
+    it '無敵時間が切れた次の被弾は通常通り lives を減らす' do
+      player.px = 100.0
+      player.py = 100.0
+      player.instance_variable_get(:@bullet_inbox) << {
+        x: player.px, y: player.py, vx: 0.0, vy: 0.0,
+        sine: false, bounce: false, garbage: true
+      }
+      player.tick(opponent_alive: true)
+      expect(player.lives).to be == 2
+
+      # 無敵時間ぶん空 tick を回す
+      Player::INVULN_FRAMES.times { player.tick(opponent_alive: true) }
+      expect(player.invuln_frames).to be == 0
+
+      player.instance_variable_get(:@bullet_inbox) << {
+        x: player.px, y: player.py, vx: 0.0, vy: 0.0,
+        sine: false, bounce: false, garbage: true
+      }
+      player.tick(opponent_alive: true)
+      expect(player.lives).to be == 1
     end
 
     it 'alive? が false の tick は早期 return（frame は進まない）' do

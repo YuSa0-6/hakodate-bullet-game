@@ -104,6 +104,10 @@ class Boss
     by = cy
     count  = @diff[:squid]
     spread = Config::FIELD_W * 0.66
+    if count <= 1
+      sink.call(bullet(bx, by, 0.0, @diff[:squid_vy]))
+      return
+    end
     count.times do |i|
       ox = -spread / 2.0 + spread * i / (count - 1)
       sink.call(bullet(bx + ox, by, 0.0, @diff[:squid_vy]))
@@ -205,7 +209,6 @@ class Boss
 
   def bullet(x, y, vx, vy, sine: false, phase: 0.0, bounce: false, sprite: :bullet_normal)
     {
-      type: Assets::Icons::BULLET_NORMAL,
       sprite: sprite,
       x: x, y: y, vx: vx, vy: vy,
       sine: sine, phase: phase, bounce: bounce
