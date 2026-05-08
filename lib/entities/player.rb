@@ -29,8 +29,10 @@ class Player
   COMBO_WINDOW     = 60   # 連続撃破とみなすframe猶予
   FRAME_DT         = 1.0 / Config::FPS
   POWERUP_DURATION = 3.0  # 食べ物取得後 3秒間 3-WAY
+  INVULN_FRAMES    = 45   # 被弾後の無敵時間（密集弾幕での連続即死を防ぐ）
+  INITIAL_LIVES    = 3    # HUD のライフ表示・初期残機を 1 箇所に揃える
 
-  attr_reader :controls, :rng, :diff, :name, :color, :powered
+  attr_reader :controls, :rng, :diff, :name, :color, :powered, :invuln_frames
   attr_accessor :px, :py, :dx, :dy, :focus,
                 :shots, :bullets, :foods, :zakos, :boss,
                 :score, :lives, :frame,
@@ -62,7 +64,7 @@ class Player
     @food_inbox   = []
 
     @score      = 0
-    @lives      = 3
+    @lives      = INITIAL_LIVES
     @frame      = 0
     @powered    = false
     @power_task = nil
@@ -74,6 +76,7 @@ class Player
 
     @garbage_queue = GarbageQueue.new
     @alive_state   = true
+    @invuln_frames = 0
 
     @barrier = nil
   end
@@ -96,26 +99,20 @@ class Player
   # ── 入力 ─────────────────────────────────────
   def handle_event(event)
     return unless alive?
-    case event[:type]
-    when 'keydown'
-      key = event[:key]
-      loc = event[:loc] || 0
-      case
-      when @controls[:left].include?(key)  then @dx = -Config::P_SPEED
-      when @controls[:right].include?(key) then @dx =  Config::P_SPEED
-      when @controls[:up].include?(key)    then @dy = -Config::P_SPEED
-      when @controls[:down].include?(key)  then @dy =  Config::P_SPEED
-      end
-      @focus = true if shift_match?(key, loc)
-    when 'keyup'
-      key = event[:key]
-      loc = event[:loc] || 0
-      case
-      when @controls[:left].include?(key), @controls[:right].include?(key) then @dx = 0
-      when @controls[:up].include?(key),   @controls[:down].include?(key)  then @dy = 0
-      end
-      @focus = false if shift_match?(key, loc)
+    type = event[:type]
+    return unless type == 'keydown' || type == 'keyup'
+
+    key  = event[:key]
+    loc  = event[:loc] || 0
+    down = type == 'keydown'
+
+    case
+    when @controls[:left].include?(key)  then @dx = down ? -Config::P_SPEED : 0
+    when @controls[:right].include?(key) then @dx = down ?  Config::P_SPEED : 0
+    when @controls[:up].include?(key)    then @dy = down ? -Config::P_SPEED : 0
+    when @controls[:down].include?(key)  then @dy = down ?  Config::P_SPEED : 0
     end
+    @focus = down if shift_match?(key, loc)
   end
 
   def shift_match?(key, loc)
@@ -134,6 +131,7 @@ class Player
     return unless alive?
     @frame += 1
     @score += 1
+    @invuln_frames -= 1 if @invuln_frames > 0
 
     drain_inboxes
 
@@ -218,10 +216,9 @@ class Player
       tgt_a = Math.atan2(pcy - (b[:y] + Config::B_SIZE / 2.0),
                          pcx - (b[:x] + Config::B_SIZE / 2.0))
 
-      # 最短角差分を [-π, π] に正規化してから turn_rate でクランプ
-      delta = tgt_a - cur_a
-      delta -= 2 * Math::PI while delta >  Math::PI
-      delta += 2 * Math::PI while delta < -Math::PI
+      # 最短角差分を [-π, π] に正規化してから turn_rate でクランプ。
+      # while ループは大 delta で多重実行になるので modulo で定数時間に。
+      delta = (tgt_a - cur_a + Math::PI) % (2 * Math::PI) - Math::PI
       turn = delta.clamp(-h[:turn_rate], h[:turn_rate])
 
       new_a = cur_a + turn
@@ -230,10 +227,20 @@ class Player
     end
   end
 
+  # 対角入力時は √2 で割って速さを揃える（軸単独入力と合成速度を一致させる）。
+  INV_SQRT2 = 1.0 / Math.sqrt(2)
+
   def move
     speed = @focus ? Config::P_SPEED * 0.4 : Config::P_SPEED
-    mx = @dx == 0 ? 0 : (@dx <=> 0) * speed
-    my = @dy == 0 ? 0 : (@dy <=> 0) * speed
+    sx = @dx == 0 ? 0 : (@dx <=> 0)
+    sy = @dy == 0 ? 0 : (@dy <=> 0)
+    if sx != 0 && sy != 0
+      mx = sx * speed * INV_SQRT2
+      my = sy * speed * INV_SQRT2
+    else
+      mx = sx * speed
+      my = sy * speed
+    end
     @px = (@px + mx).clamp(0, Config::FIELD_W - Config::P_SIZE)
     @py = (@py + my).clamp(0, Config::FIELD_H - Config::P_SIZE)
   end
@@ -297,11 +304,13 @@ class Player
   end
 
   def resolve_self_hit
+    return if @invuln_frames > 0
     hit = @bullets.find { |b| rect_collide?(b[:x], b[:y], Config::B_SIZE, Config::B_SIZE) }
     return unless hit
     @bullets.delete(hit)
     @lives -= 1
     @combo = 0
+    @invuln_frames = INVULN_FRAMES
     if @lives <= 0
       @alive_state = false
     end

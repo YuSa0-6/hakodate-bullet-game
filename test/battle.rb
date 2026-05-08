@@ -116,6 +116,49 @@ describe Battle do
 
       expect(battle.winner).to be_nil
     end
+
+    # boss フェーズ判定：HP を直接削って dead? を制御する。
+    # tick 経由で boss を立てると弾幕 Fiber が走るため、Boss を直接代入する。
+    with 'boss フェーズの撃破判定' do
+      def enter_boss_phase!
+        battle.instance_variable_set(:@phase, :boss)
+        battle.p1.boss = Boss.new(diff: Config::DIFF[:easy])
+        battle.p2.boss = Boss.new(diff: Config::DIFF[:easy])
+      end
+
+      # 各プレイヤーは自分のフィールド側のボスを倒す（独立したボス）。
+      # よって「P1 側の boss が dead? = P1 が自分のボスを倒した = P1 勝利」が正しい。
+      it 'P1 が自分側のボスを先に倒したら :p1 の勝ち' do
+        enter_boss_phase!
+        battle.p1.boss.damage(battle.p1.boss.max_hp)
+
+        battle.tick
+        expect(battle.winner).to be == :p1
+      end
+
+      it 'P2 が自分側のボスを先に倒したら :p2 の勝ち' do
+        enter_boss_phase!
+        battle.p2.boss.damage(battle.p2.boss.max_hp)
+
+        battle.tick
+        expect(battle.winner).to be == :p2
+      end
+
+      it '両ボス同時撃破は :draw' do
+        enter_boss_phase!
+        battle.p1.boss.damage(battle.p1.boss.max_hp)
+        battle.p2.boss.damage(battle.p2.boss.max_hp)
+
+        battle.tick
+        expect(battle.winner).to be == :draw
+      end
+
+      it '両ボス生存中は wave 終了後でも勝者未確定' do
+        enter_boss_phase!
+        battle.tick
+        expect(battle.winner).to be_nil
+      end
+    end
   end
 
   with '雑魚スポーンの公平性' do
@@ -130,6 +173,21 @@ describe Battle do
       expect(z2).not.to be_nil
       expect(z1[:emoji]).to be == z2[:emoji]
       expect(z1[:x]).to be == z2[:x]
+    end
+  end
+
+  with 'spawn_boss! の二重呼出ガード' do
+    it 'boss フェーズ中は in_boss_phase? ガードでボスは一度しか作られない' do
+      battle.instance_variable_set(:@phase, :boss)
+
+      battle.tick
+      first_boss = battle.p1.boss
+      expect(first_boss).not.to be_nil
+
+      # 続けて tick しても @boss は同じインスタンスのまま（弾幕 Fiber が二重起動しない）
+      5.times { battle.tick }
+      expect(battle.p1.boss).to be_equal(first_boss)
+      expect(battle.p2.boss).not.to be_nil
     end
   end
 end

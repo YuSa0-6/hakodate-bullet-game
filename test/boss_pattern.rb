@@ -36,6 +36,15 @@ describe Boss do
       # 等間隔なら gap の集合は 1 種類
       expect(gaps.uniq.size).to be == 1
     end
+
+    it 'squid:1 の難易度設定でも 0 除算せず 1 発を発射する（count-1 ガード）' do
+      one_shot = Config::DIFF[:easy].merge(squid: 1)
+      one_shot_boss = Boss.new(diff: one_shot)
+      bullets = []
+      one_shot_boss.send(:fire_squid_spread, ->(b) { bullets << b })
+      expect(bullets.size).to be == 1
+      expect(bullets.first[:vy]).to be == one_shot[:squid_vy]
+    end
   end
 
   with '#fire_ramen_burst（ラーメン乱打）' do
@@ -84,6 +93,15 @@ describe Boss do
       bullets = []
       boss.send(:fire_burger_radial, ->(b) { bullets << b })
       expect(bullets.size).to be == diff[:burger_arms] * 2
+    end
+
+    it 'burger_extra:true なら phase 1（HP 満タン）でも倍数になる（hard 想定）' do
+      # hard カタログには burger_extra: true があり、phase に依存せず追加旋回が出る。
+      hard_diff = Config::DIFF[:hard]
+      hard_boss = Boss.new(diff: hard_diff)
+      bullets = []
+      hard_boss.send(:fire_burger_radial, ->(b) { bullets << b })
+      expect(bullets.size).to be == hard_diff[:burger_arms] * 2
     end
   end
 

@@ -13,6 +13,9 @@ require_relative 'renderers/panel'
 require_relative 'renderers/center_gauge'
 require_relative 'renderers/screens'
 
+# 並行接続の初回 enqueue で sprite キャッシュ Hash の競合を起こさないよう温めておく。
+Sprites.eager_load!
+
 # Lively の View 本体。
 # 状態管理（:start / :playing / :result）と Async ループだけを担う薄い層。
 #
@@ -122,19 +125,29 @@ class BattleView < Live::View
     end
   end
 
+  # 「キャラ系の通常キーだけ」でゲームを開始する。タブキーやファンクションキー、
+  # OS のショートカット系キーで誤発火しないようホワイトリスト方式にする。
+  TITLE_START_KEYS = %w[Enter  ArrowUp ArrowDown].freeze
+
   def handle_title(event)
     return unless event[:type] == 'keydown'
     return if event[:repeat]
-    case event[:key]
+    key = event[:key]
+    case key
     when 'ArrowLeft', 'a', 'A'
       shift_difficulty(-1)
     when 'ArrowRight', 'd', 'D'
       shift_difficulty(+1)
-    when 'Tab', 'F5', 'F12', 'Meta', 'Control', 'Alt', 'Shift'
-      nil
     else
-      start_battle!
+      start_battle! if title_start_key?(key)
     end
+  end
+
+  # 1 文字の表示可能キー（英数・記号・スペース）か明示的に許可されたキーのみ許す。
+  def title_start_key?(key)
+    return false if key.nil?
+    return true if TITLE_START_KEYS.include?(key)
+    key.length == 1 && !key.match?(/\A[\p{Cc}\p{Cf}]\z/)
   end
 
   def handle_result(event)
