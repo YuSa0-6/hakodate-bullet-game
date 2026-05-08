@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 本プロジェクトは Gemfile/Gemfile.lock ではなく gems.rb / gems.locked を使う
+  BUNDLE_GEMFILE: gems.rb
+  BUNDLE_LOCKFILE: gems.locked
+
+jobs:
+  test:
+    name: ruby -c + sus
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.6'
+          bundler-cache: true
+
+      - name: Syntax check (ruby -c)
+        run: |
+          set -e
+          fail=0
+          # 走査対象: トップレベルの .rb と config / lib / test
+          while IFS= read -r f; do
+            if ! ruby -c "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::ruby -c failed"
+              ruby -c "$f" || true
+              fail=1
+            fi
+          done < <(find application.rb config lib test -type f -name '*.rb')
+          exit $fail
+
+      - name: Run sus tests
+        run: bundle exec sus test/
+
+      - name: Smoke load (require lively + application.rb)
+        # Stop hook と同等の最終ゲート。lively/falcon の require が壊れていない事だけ確認。
+        # サーバは起動しない（load のみ）。
+        run: |
+          bundle exec ruby -e '
+            require "lively"
+            load "application.rb"
+            puts "smoke ok: BattleView constants = #{BattleView.constants.sort.inspect}"
+          '
