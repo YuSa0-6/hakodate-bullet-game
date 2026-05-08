@@ -141,7 +141,11 @@ class BattleView < Live::View
       shift_difficulty(-1)
     when 'ArrowRight', 'd', 'D'
       shift_difficulty(+1)
-    when 'Tab', 'F5', 'F12', 'Meta', 'Control', 'Alt', 'Shift'
+    when 'Tab', 'F5', 'F12', 'Meta', 'Control', 'Alt', 'Shift', 'b', 'B'
+      # b / B は Konami シーケンスの終端文字。中途半端なタイミングで押された
+      # 場合に start_battle! へ流すと、ユーザーが Konami を入力しているつもりで
+      # ゲームが始まってしまうため no-op にする（index 8 で押されたケースは
+      # consume_konami! が先に true で吸収するので、ここには来ない）。
       nil
     else
       start_battle!

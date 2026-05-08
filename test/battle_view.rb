@@ -72,6 +72,13 @@ describe BattleView do
       end
     end
 
+    it 'b / B 単独ではタイトルから遷移しない（Konami の終端文字を保護）' do
+      %w[b B].each do |key|
+        view.handle(type: 'keydown', key: key)
+        expect(view.instance_variable_get(:@state)).to be == :start
+      end
+    end
+
     it 'repeat イベントは無視される（左右キーが押しっぱなしで暴走しない）' do
       view.handle(type: 'keydown', key: 'ArrowRight')
       d1 = view.instance_variable_get(:@difficulty)
