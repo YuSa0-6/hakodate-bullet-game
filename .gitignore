@@ -1,0 +1,6 @@
+# Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/
+
+# Ruby LSP cache
+.ruby-lsp/

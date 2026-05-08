@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pre-commit: コミット予定の Ruby ファイルに対して
+#   1. ruby -c による構文チェック
+#   2. bundle exec sus test/ の実行
+# を行い、いずれか失敗したらコミットをブロックする。
+#
+# 有効化: `git config core.hooksPath .githooks`（リポジトリ内に閉じた設定）
+# スキップしたい場合: `git commit --no-verify`（記事 MVH の Stop hook で再度検出されます）
+set -euo pipefail
+
+CHANGED_RB=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.rb$' || true)
+
+if [[ -z "$CHANGED_RB" ]]; then
+  exit 0
+fi
+
+# ── 1. 構文チェック ──────────────────────────────
+SYNTAX_FAIL=0
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  [[ ! -f "$f" ]] && continue
+  if ! ruby -c "$f" >/dev/null 2>&1; then
+    echo "✗ syntax error: $f"
+    ruby -c "$f" || true
+    SYNTAX_FAIL=1
+  fi
+done <<< "$CHANGED_RB"
+
+if [[ $SYNTAX_FAIL -ne 0 ]]; then
+  echo "pre-commit: 構文エラーで中断しました"
+  exit 1
+fi
+
+# ── 2. テスト ────────────────────────────────────
+echo "pre-commit: bundle exec sus test/ を実行中..."
+TIMEOUT_CMD=""
+if command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="gtimeout 60"
+elif command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="timeout 60"
+fi
+if ! BUNDLE_GEMFILE=gems.rb BUNDLE_LOCKFILE=gems.locked \
+     ${TIMEOUT_CMD} bundle exec sus test/ ; then
+  echo "pre-commit: sus テスト失敗で中断しました"
+  exit 1
+fi
+
+exit 0
