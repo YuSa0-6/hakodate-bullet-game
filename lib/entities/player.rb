@@ -305,7 +305,9 @@ class Player
     count = z[:garbage]                # 通常 1, 硬い敵 2
     count += 1 if @combo >= 2
     count.times { @pending_attacks << base }
-    @pending_attacks << :wave if @combo >= 3   # 連続コンボでサイン波ボーナス
+    # 連続コンボでサイン波ボーナス。Extra は @diff[:wave_combo_threshold]=1 で常時送出。
+    wave_threshold = @diff[:wave_combo_threshold] || 3
+    @pending_attacks << :wave if @combo >= wave_threshold
   end
 
   def resolve_self_hit

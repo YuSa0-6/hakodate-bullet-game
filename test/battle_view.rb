@@ -78,6 +78,54 @@ describe BattleView do
       view.handle(type: 'keydown', key: 'ArrowRight', repeat: true)
       expect(view.instance_variable_get(:@difficulty)).to be == d1
     end
+
+    it '未解放時は ←→ で :extra に到達しない（DIFFICULTIES 内のみ循環）' do
+      Config::DIFFICULTIES.size.times do
+        view.handle(type: 'keydown', key: 'ArrowRight')
+      end
+      expect(view.instance_variable_get(:@difficulty)).to be == :easy
+      expect(view.instance_variable_get(:@extra_unlocked)).to be == false
+    end
+  end
+
+  with 'Konami シーケンスによる EXTRA 解放' do
+    def feed_konami(view)
+      BattleView::KONAMI_SEQUENCE.each do |key|
+        view.handle(type: 'keydown', key: key)
+      end
+    end
+
+    it '完全な Konami 入力で @extra_unlocked = true になり、難易度が :extra に切替' do
+      feed_konami(view)
+      expect(view.instance_variable_get(:@extra_unlocked)).to be == true
+      expect(view.instance_variable_get(:@difficulty)).to be == :extra
+      expect(view.instance_variable_get(:@state)).to be == :start
+    end
+
+    it '途中で違うキーが入るとシーケンスは破綻する（解放されない）' do
+      Sync do
+        view.handle(type: 'keydown', key: 'ArrowUp')
+        view.handle(type: 'keydown', key: 'ArrowUp')
+        view.handle(type: 'keydown', key: 'z')  # Konami と無関係：start_battle! に流れる
+        expect(view.instance_variable_get(:@extra_unlocked)).to be == false
+        expect(view.instance_variable_get(:@state)).to be == :playing
+        view.send(:teardown_battle!)
+      end
+    end
+
+    it '解放後は ←→ で :extra も選択肢に並ぶ（ALL_DIFFICULTIES 循環）' do
+      feed_konami(view)
+      # 現在 :extra → 右に進めて :easy に折り返す
+      view.handle(type: 'keydown', key: 'ArrowRight')
+      expect(view.instance_variable_get(:@difficulty)).to be == :easy
+      # ←→ で全要素に届くこと
+      seen = [view.instance_variable_get(:@difficulty)]
+      (Config::ALL_DIFFICULTIES.size - 1).times do
+        view.handle(type: 'keydown', key: 'ArrowRight')
+        seen << view.instance_variable_get(:@difficulty)
+      end
+      expect(seen.sort).to be == Config::ALL_DIFFICULTIES.sort
+    end
   end
 
   with '#start_battle! / #teardown_battle!' do

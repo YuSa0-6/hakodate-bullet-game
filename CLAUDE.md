@@ -19,6 +19,7 @@ Ruby + Lively + Async ベースの 2 人対戦シューティング。
 - [ADR-0001 固定 tick + 適応 render](docs/adr/0001-fixed-tick-adaptive-render.md)
 - [ADR-0002 Producer/Consumer 分離](docs/adr/0002-producer-consumer-inboxes.md)
 - [ADR-0003 Async::Barrier 注入必須](docs/adr/0003-barrier-injection.md)
+- [ADR-0004 Extra モード（Konami 解放）](docs/adr/0004-extra-mode-and-konami-unlock.md)
 
 ## 禁止事項
 - `gems.locked` を直接編集しない（`bundle install` で更新）

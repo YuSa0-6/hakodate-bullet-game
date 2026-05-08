@@ -176,6 +176,23 @@ describe Battle do
     end
   end
 
+  with 'EXTRA difficulty' do
+    let(:extra_battle) { Battle.new(difficulty: :extra, barrier: barrier) }
+
+    it 'difficulty=:extra で Battle が起動でき、初期状態が崩れない' do
+      expect(extra_battle.difficulty).to be == :extra
+      expect(extra_battle.phase).to be == :wave
+      expect(extra_battle.p1).to be(:alive?)
+      expect(extra_battle.p2).to be(:alive?)
+    end
+
+    it 'tick で例外を起こさない（EXTRA パラメータが Player/Boss 経路で破綻しない）' do
+      # zako_interval (extra=19) 越えまで進めて雑魚スポーンも踏む
+      30.times { extra_battle.tick }
+      expect(extra_battle.over?).to be == false
+    end
+  end
+
   with 'spawn_boss! の二重呼出ガード' do
     it 'boss フェーズ中は in_boss_phase? ガードでボスは一度しか作られない' do
       battle.instance_variable_set(:@phase, :boss)

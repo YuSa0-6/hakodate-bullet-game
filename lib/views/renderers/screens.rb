@@ -8,8 +8,16 @@ module Renderers
   module Screens
     module_function
 
-    def title(builder, difficulty:)
+    DIFF_DESC = {
+      easy:   'ゆっくり・少なめ (スコア×1)',
+      normal: '速め・多め (スコア×2)',
+      hard:   'カオス！ (スコア×3)',
+      extra:  '弾幕地獄・常時サイン波・星形連弾 (スコア×5)'
+    }.freeze
+
+    def title(builder, difficulty:, extra_unlocked: false)
       d = Config::DIFF[difficulty]
+      visible = extra_unlocked ? Config::ALL_DIFFICULTIES : Config::DIFFICULTIES
       builder.tag(:div, style: full_screen_bg) do
         builder.tag(:div, style: 'font-size:36px;font-weight:bold;letter-spacing:2px;margin-bottom:4px;') do
           builder.text("#{Assets::Icons::LANTERN} 函館 DANMAKU - VS BATTLE #{Assets::Icons::LANTERN}")
@@ -18,9 +26,15 @@ module Renderers
           builder.text('〜 ローカル対戦・雑魚撃破でお邪魔送出！ 〜')
         end
 
+        if extra_unlocked
+          builder.tag(:div, style: 'font-size:12px;color:#9c27b0;font-weight:bold;letter-spacing:1px;margin-bottom:8px;') do
+            builder.text('★ EXTRA UNLOCKED ★')
+          end
+        end
+
         builder.tag(:div, style: 'font-size:12px;color:#666;margin-bottom:8px;') { builder.text('← → で難易度を選択') }
         builder.tag(:div, style: 'display:flex;justify-content:center;gap:10px;margin-bottom:8px;') do
-          Config::DIFFICULTIES.each do |dk|
+          visible.each do |dk|
             selected = dk == difficulty
             c   = Config::DIFF[dk][:color]
             bg  = selected ? "#{c}28" : 'rgba(255,255,255,0.04)'
@@ -33,13 +47,8 @@ module Renderers
           end
         end
 
-        desc = {
-          easy:   'ゆっくり・少なめ (スコア×1)',
-          normal: '速め・多め (スコア×2)',
-          hard:   'カオス！ (スコア×3)'
-        }
         builder.tag(:div, style: "font-size:12px;color:#{d[:color]};margin-bottom:24px;") do
-          builder.text(desc[difficulty])
+          builder.text(DIFF_DESC[difficulty])
         end
 
         # 操作説明

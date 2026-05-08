@@ -116,6 +116,32 @@ describe Boss do
       # bullet_star スプライトを使う
       expect(bullets).to be(:all?) { |b| b[:sprite] == :bullet_star }
     end
+
+    it 'rot を与えると散開角に均一にオフセットがかかる（duo モード用）' do
+      base = []
+      base_pairs = boss.send(:spawn_star_formation, ->(b) { base << b })
+      rotated = []
+      rot_pairs = boss.send(:spawn_star_formation, ->(b) { rotated << b }, rot: Math::PI / 10)
+
+      diffs = base_pairs.zip(rot_pairs).map { |(_, a0), (_, a1)| (a1 - a0).round(6) }
+      expect(diffs.uniq).to be == [(Math::PI / 10).round(6)]
+    end
+  end
+
+  with 'starburst パラメータ（@diff 経由）' do
+    it '既定（HARD 以下）は cycle=7.0, phase 閾値=2, duo=false' do
+      hard_boss = Boss.new(diff: Config::DIFF[:hard])
+      expect(hard_boss.starburst_cycle).to be == Boss::STARBURST_CYCLE
+      expect(hard_boss.starburst_phase_threshold).to be == 2
+      expect(hard_boss.starburst_duo?).to be == false
+    end
+
+    it 'EXTRA は cycle 短縮・phase 1 から発動・duo=true' do
+      extra_boss = Boss.new(diff: Config::DIFF[:extra])
+      expect(extra_boss.starburst_cycle).to be == 4.0
+      expect(extra_boss.starburst_phase_threshold).to be == 1
+      expect(extra_boss.starburst_duo?).to be == true
+    end
   end
 
   with '#fire_bento（弁当 bounce 弾）' do

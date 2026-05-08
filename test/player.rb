@@ -97,6 +97,19 @@ describe Player do
 
       expect(player.pending_attacks).to be(:include?, :wave)
     end
+
+    # Extra モードは @diff[:wave_combo_threshold] = 1 で初撃から :wave を出す
+    it 'EXTRA difficulty では combo=1 でも :wave が追加される（常時サイン波）' do
+      extra_player = Player.new(
+        name: 'P1', color: '#7cf',
+        controls: Config::P1_CONTROLS, diff: Config::DIFF[:extra],
+        seed: 12_345
+      )
+      extra_player.register_zako_kill!(zako)
+
+      expect(extra_player.combo).to be == 1
+      expect(extra_player.pending_attacks).to be(:include?, :wave)
+    end
   end
 
   with '#consume_pending_attacks（Battle が毎 tick 取り出す）' do

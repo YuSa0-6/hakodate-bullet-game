@@ -38,7 +38,10 @@ module Config
   # （`require_relative 'assets'` は使う側で）
 
   # ── 難易度 ────────────────────────────────────
-  DIFFICULTIES = %i[easy normal hard].freeze
+  # :extra は隠し（Konamiコードで解放）。BattleView が @extra_unlocked で表示制御する。
+  DIFFICULTIES        = %i[easy normal hard].freeze
+  EXTRA_DIFFICULTY    = :extra
+  ALL_DIFFICULTIES    = (DIFFICULTIES + [EXTRA_DIFFICULTY]).freeze
 
   DIFF = {
     easy: {
@@ -76,6 +79,28 @@ module Config
       interval: 75,
       boss_hp: 900, boss_vx: 5.5,
       food_interval: 160, score_food: 30
+    },
+    # ── EXTRA（隠し）──
+    # HARD × 1.5 相当の弾幕密度 + Extra 専用キーで挙動拡張：
+    #   wave_combo_threshold : 雑魚撃破でサイン波弾を送出するコンボ閾値（HARD以下は3）
+    #   starburst_phase      : 星形バーストが発動するボスフェーズ閾値（HARD以下は2）
+    #   starburst_cycle      : 星形バーストの周期[秒]（HARD以下は7.0）
+    #   starburst_duo        : 星形を2セット（30°回転で重ねる）同時放出するか
+    extra: {
+      label: 'EXTRA',  color: '#9c27b0', score_mult: 5,
+      zako_interval: 19,
+      squid: 15, squid_vy: 9.75,
+      ramen: 11, ramen_vy: 6.75,
+      sushi: 14, sushi_sp: 7.5,
+      burger_arms: 18, burger_extra: true,
+      bento_vx: 8.25,  bento_interval: 53,
+      interval: 50,
+      boss_hp: 1350, boss_vx: 8.25,
+      food_interval: 240, score_food: 20,
+      wave_combo_threshold: 1,
+      starburst_phase: 1,
+      starburst_cycle: 4.0,
+      starburst_duo: true
     }
   }.freeze
 
@@ -98,5 +123,5 @@ module Config
   }.freeze
 
   # ── ハイスコア（メモリ保持） ─────────────────────
-  TOP_SCORES = {easy: [], normal: [], hard: []}
+  TOP_SCORES = {easy: [], normal: [], hard: [], extra: []}
 end
