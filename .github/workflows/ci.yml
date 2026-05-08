@@ -12,11 +12,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # 本プロジェクトは Gemfile/Gemfile.lock ではなく gems.rb / gems.locked を使う
-  BUNDLE_GEMFILE: gems.rb
-  BUNDLE_LOCKFILE: gems.locked
-
 jobs:
   test:
     name: ruby -c + sus
@@ -27,20 +22,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Ruby
+        # 本プロジェクトは gems.rb / gems.locked（bundler の代替ファイル名）を使う。
+        # BUNDLE_GEMFILE を設定すると setup-ruby は ${BUNDLE_GEMFILE}.lock を探すため
+        # gems.rb.lock を要求して `cat` が失敗する。env を設定せず、action の自動検出
+        # （gems.rb → gems.locked）に任せること。
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3.6'
           bundler-cache: true
 
-      - name: Syntax check (ruby -c)
+      - name: Syntax check (ruby parse)
+        # `ruby -c` は #!/usr/bin/env lively のような非ruby shebang を持つファイルで
+        # "no Ruby script found in input" エラーになる（application.rb がこれに該当）。
+        # RubyVM::InstructionSequence.compile_file は shebang を無視し、ファイルの
+        # マジックコメントから encoding も解決するため安全。
         run: |
           set -e
           fail=0
-          # 走査対象: トップレベルの .rb と config / lib / test
           while IFS= read -r f; do
-            if ! ruby -c "$f" >/dev/null 2>&1; then
-              echo "::error file=$f::ruby -c failed"
-              ruby -c "$f" || true
+            if ! ruby -e "RubyVM::InstructionSequence.compile_file(ARGV[0])" "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::ruby parse failed"
+              ruby -e "RubyVM::InstructionSequence.compile_file(ARGV[0])" "$f" || true
               fail=1
             fi
           done < <(find application.rb config lib test -type f -name '*.rb')

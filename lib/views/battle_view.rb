@@ -42,7 +42,7 @@ class BattleView < Live::View
 
   STATIC_CSS = <<~CSS
     /* ── 全画面スケール ── 固定座標(#{Config::W}x#{Config::H})を viewport にフィット */
-    html, body { margin:0; padding:0; height:100%; background:#000; overflow:hidden; }
+    html, body { margin:0; padding:0; height:100%; background:#0a1525; overflow:hidden; }
     live-view { display:block; width:100vw; height:100vh; position:relative; }
     .stage {
       width:#{Config::W}px; height:#{Config::H}px;
@@ -258,6 +258,9 @@ class BattleView < Live::View
   def stage_style
     "display:flex;justify-content:center;align-items:flex-start;gap:#{Config::PANEL_GAP}px;" \
       "width:#{Config::W}px;height:#{Config::H}px;box-sizing:border-box;" \
-      'background:linear-gradient(to bottom,#050510,#0d0d1a);font-family:sans-serif;user-select:none;'
+      "background-color:#0a1a2a;" \
+      "background-image:url('/bg-hakodate.png');" \
+      'background-size:cover;background-position:center;background-repeat:no-repeat;' \
+      'image-rendering:pixelated;font-family:sans-serif;user-select:none;'
   end
 end

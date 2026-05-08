@@ -22,7 +22,8 @@ module Renderers
     def outer_style
       "width:#{Config::GAUGE_W}px;height:#{Config::PANEL_H}px;flex-shrink:0;" \
         'display:flex;flex-direction:column;align-items:center;' \
-        'background:#0a0a14;border:1px solid #1a1a2e;border-radius:6px;padding:8px 4px;box-sizing:border-box;'
+        'background:rgba(10,21,37,0.85);border:1px solid #c89b3c;border-radius:6px;padding:8px 4px;box-sizing:border-box;' \
+        'box-shadow:0 0 0 1px rgba(200,155,60,0.2),0 4px 16px rgba(0,0,0,0.5);'
     end
 
     def render_phase(builder, battle)
