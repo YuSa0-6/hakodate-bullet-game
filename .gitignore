@@ -4,3 +4,6 @@
 
 # Ruby LSP cache
 .ruby-lsp/
+
+# Bundler local config (per-machine, e.g. install --with test)
+.bundle/
