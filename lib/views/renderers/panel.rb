@@ -15,14 +15,24 @@ module Renderers
 
     PANEL_STYLE = ("width:#{Config::PANEL_W}px;height:#{Config::PANEL_H}px;" \
       'box-sizing:border-box;display:flex;flex-direction:column;' \
-      'background:#0d0d1a;border:1px solid #1a1a2e;border-radius:6px;overflow:hidden;').freeze
+      'background:#0a1525;border:1px solid #c89b3c;border-radius:6px;overflow:hidden;' \
+      'box-shadow:0 0 0 1px rgba(200,155,60,0.2),0 4px 16px rgba(0,0,0,0.5);').freeze
 
     HUD_STYLE = ("height:#{Config::HUD_H}px;flex-shrink:0;" \
       'display:flex;align-items:center;justify-content:space-between;padding:0 10px;' \
-      'background:#1a1a2e;color:white;font-family:sans-serif;font-size:12px;').freeze
+      'background:#0a1525;border-bottom:1px solid #c89b3c44;color:white;font-family:sans-serif;font-size:12px;').freeze
 
-    FIELD_STYLE = ("position:relative;width:#{Config::FIELD_W}px;height:#{Config::FIELD_H}px;" \
-      'background:#0d0d1a;overflow:hidden;').freeze
+    # ドット絵背景：上部に夜景＋下部は暗い海。fallback はグラデで概ね同じ印象。
+    # オーバーレイで全体を暗めに揃え、弾やスプライトの視認性を確保する。
+    FIELD_STYLE = ("position:relative;width:#{Config::FIELD_W}px;height:#{Config::FIELD_H}px;overflow:hidden;" \
+      "background-color:#050a14;" \
+      "background-image:linear-gradient(rgba(5,10,20,0.55),rgba(5,10,20,0.85))," \
+      "url('/bg-playfield.png')," \
+      "linear-gradient(to bottom,#0a1a2a 0%,#0a1525 30%,#050a14 100%);" \
+      "background-size:auto,cover,auto;" \
+      "background-position:center,center top,center;" \
+      "background-repeat:no-repeat,no-repeat,no-repeat;" \
+      "image-rendering:pixelated;").freeze
 
     SP_PLAYER         = Sprites.class_name(:player)
     SP_SHOT           = Sprites.class_name(:shot)

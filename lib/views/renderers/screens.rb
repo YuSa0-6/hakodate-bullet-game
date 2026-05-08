@@ -107,7 +107,15 @@ module Renderers
     end
 
     def full_screen_bg
-      "display:inline-block;font-family:sans-serif;user-select:none;width:#{Config::W}px;background:linear-gradient(to bottom,#0d0d1a,#1a1a2e);color:white;text-align:center;padding:40px 0;box-sizing:border-box;"
+      "display:inline-block;font-family:sans-serif;user-select:none;width:#{Config::W}px;" \
+        'background-color:#0a1a2a;' \
+        "background-image:linear-gradient(rgba(10,21,37,0.55),rgba(5,10,20,0.85))," \
+        "url('/bg-hakodate.png');" \
+        'background-size:auto,cover;' \
+        'background-position:center,center;' \
+        'background-repeat:no-repeat,no-repeat;' \
+        'image-rendering:pixelated;' \
+        'color:white;text-align:center;padding:40px 0;box-sizing:border-box;'
     end
   end
 end
