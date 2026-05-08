@@ -369,13 +369,6 @@ module Sprites
     rules.join("\n")
   end
 
-  # 全 sprite の data URI を事前計算しておく。通常は all_css 評価時に自然に温まるが、
-  # all_css を経由しない描画パスや並行接続初期化での Hash 競合に備えて公開する。
-  def eager_load!
-    ART.each_key { |name| data_uri(name) }
-    nil
-  end
-
   # data URI は base64 で固定する。
   # CGI.escape は空白を `+` にする form encoding (RFC 1738) なので、
   # SVG の `<svg xmlns="...">` の空白が `+` になりブラウザが `<svg+xmlns="...">`

@@ -30,7 +30,6 @@ class Player
   FRAME_DT         = 1.0 / Config::FPS
   POWERUP_DURATION = 3.0  # 食べ物取得後 3秒間 3-WAY
   INVULN_FRAMES    = 45   # 被弾後の無敵時間（密集弾幕での連続即死を防ぐ）
-  INITIAL_LIVES    = 3    # HUD のライフ表示・初期残機を 1 箇所に揃える
 
   attr_reader :controls, :rng, :diff, :name, :color, :powered, :invuln_frames
   attr_accessor :px, :py, :dx, :dy, :focus,
@@ -64,7 +63,7 @@ class Player
     @food_inbox   = []
 
     @score      = 0
-    @lives      = INITIAL_LIVES
+    @lives      = 3
     @frame      = 0
     @powered    = false
     @power_task = nil
@@ -99,20 +98,26 @@ class Player
   # ── 入力 ─────────────────────────────────────
   def handle_event(event)
     return unless alive?
-    type = event[:type]
-    return unless type == 'keydown' || type == 'keyup'
-
-    key  = event[:key]
-    loc  = event[:loc] || 0
-    down = type == 'keydown'
-
-    case
-    when @controls[:left].include?(key)  then @dx = down ? -Config::P_SPEED : 0
-    when @controls[:right].include?(key) then @dx = down ?  Config::P_SPEED : 0
-    when @controls[:up].include?(key)    then @dy = down ? -Config::P_SPEED : 0
-    when @controls[:down].include?(key)  then @dy = down ?  Config::P_SPEED : 0
+    case event[:type]
+    when 'keydown'
+      key = event[:key]
+      loc = event[:loc] || 0
+      case
+      when @controls[:left].include?(key)  then @dx = -Config::P_SPEED
+      when @controls[:right].include?(key) then @dx =  Config::P_SPEED
+      when @controls[:up].include?(key)    then @dy = -Config::P_SPEED
+      when @controls[:down].include?(key)  then @dy =  Config::P_SPEED
+      end
+      @focus = true if shift_match?(key, loc)
+    when 'keyup'
+      key = event[:key]
+      loc = event[:loc] || 0
+      case
+      when @controls[:left].include?(key), @controls[:right].include?(key) then @dx = 0
+      when @controls[:up].include?(key),   @controls[:down].include?(key)  then @dy = 0
+      end
+      @focus = false if shift_match?(key, loc)
     end
-    @focus = down if shift_match?(key, loc)
   end
 
   def shift_match?(key, loc)

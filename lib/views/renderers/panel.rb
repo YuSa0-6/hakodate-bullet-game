@@ -43,7 +43,7 @@ module Renderers
     def render_hud(builder, p)
       builder.tag(:div, style: HUD_STYLE) do
         builder.tag(:span, style: 'min-width:80px;') do
-          builder.text(Assets::Icons::LIFE_FULL * p.lives + Assets::Icons::LIFE_EMPTY * (Player::INITIAL_LIVES - p.lives))
+          builder.text(Assets::Icons::LIFE_FULL * p.lives + Assets::Icons::LIFE_EMPTY * (3 - p.lives))
         end
         builder.tag(:span, style: "color:#{p.color};font-weight:bold;font-size:13px;") do
           builder.text(p.name)

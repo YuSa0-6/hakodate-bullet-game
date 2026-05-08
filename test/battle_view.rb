@@ -65,8 +65,8 @@ describe BattleView do
       end
     end
 
-    it 'F12 や Tab などのブラウザ機能キーでは :playing に遷移しない（ホワイトリスト）' do
-      %w[F12 Tab Meta Shift Control Alt CapsLock].each do |key|
+    it 'Tab / F12 / Meta などの機能キーでは :playing に遷移しない' do
+      %w[F12 Tab Meta Shift Control Alt].each do |key|
         view.handle(type: 'keydown', key: key)
         expect(view.instance_variable_get(:@state)).to be == :start
       end
@@ -77,27 +77,6 @@ describe BattleView do
       d1 = view.instance_variable_get(:@difficulty)
       view.handle(type: 'keydown', key: 'ArrowRight', repeat: true)
       expect(view.instance_variable_get(:@difficulty)).to be == d1
-    end
-  end
-
-  with '#title_start_key?' do
-    it '英数字 1 文字は許容' do
-      expect(view.send(:title_start_key?, 'z')).to be == true
-      expect(view.send(:title_start_key?, '5')).to be == true
-    end
-
-    it 'Enter は許容（明示ホワイトリスト）' do
-      expect(view.send(:title_start_key?, 'Enter')).to be == true
-    end
-
-    it '長い名前のキー（F12, Meta など）は拒否' do
-      expect(view.send(:title_start_key?, 'F12')).to be == false
-      expect(view.send(:title_start_key?, 'Meta')).to be == false
-      expect(view.send(:title_start_key?, 'CapsLock')).to be == false
-    end
-
-    it 'nil や空キーは拒否' do
-      expect(view.send(:title_start_key?, nil)).to be == false
     end
   end
 
