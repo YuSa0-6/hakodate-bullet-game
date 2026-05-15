@@ -3,6 +3,8 @@
 Ruby + [Lively](https://github.com/socketry/lively) + Async ベースの 2 人対戦シューティングゲーム。
 1 台の端末を 2 人で共有してプレイする、ローカル対戦型のブラウザゲームです。
 
+![ゲームプレイ画面](docs/screenshot.jpeg)
+
 ## 必要環境
 
 - Ruby（`gems.rb` の指定に従う）
@@ -21,7 +23,7 @@ bundle install
 ローカルでサーバーを起動する:
 
 ```sh
-BUNDLE_GEMFILE=gems.rb BUNDLE_LOCKFILE=gems.locked bundle exec lively application.rb
+BUNDLE_GEMFILE=gems.rb BUNDLE_LOCKFILE=gems.locked bundle exec lively ./application.rb
 ```
 
 起動後、標準出力に表示される URL（既定では `http://localhost:9292`）をブラウザで開くとタイトル画面が表示されます。
